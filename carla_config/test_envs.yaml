@@ -1,0 +1,28 @@
+# @package _group_
+- env_id: LeaderBoard-v0
+  env_configs:
+    carla_map: Town01
+    weather_group: test
+    routes_group: test
+  gpu: 0
+
+- env_id: LeaderBoard-v0
+  env_configs:
+    carla_map: Town03
+    weather_group: test
+    routes_group: test
+  gpu: 0
+
+- env_id: LeaderBoard-v0
+  env_configs:
+    carla_map: Town04
+    weather_group: test
+    routes_group: test
+  gpu: 0
+
+#- env_id: LeaderBoard-v0
+#  env_configs:
+#    carla_map: Town06
+#    weather_group: test
+#    routes_group: test
+#  gpu: 0

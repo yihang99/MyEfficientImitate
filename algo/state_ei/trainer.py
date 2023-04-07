@@ -15,6 +15,7 @@ from pickle_utils import *
 import torch.autograd as autograd
 import numpy as np
 
+
 class Trainer:
     def __init__(self, checkpoint, config):
         self.model = MLPModel(config).to(torch.device('cuda'))
@@ -155,14 +156,15 @@ class Trainer:
                 bc_loss
             ) = self.update_weights(batch)
 
-            print("Training Step:{}; Batch Step:{}; P:{:.3f}, V:{:.3f}, R:{:.3f}, FRP:{:.3f}, FRE:{:.3f}, C:{:.3f}, BC:{:.3f}, E:{:.3f}, G:{:.3f} "
-                  "| GMax:{:.3f}, GMean:{:.3f}, GMin:{:.3f} | BVMax:{:.3f}, BVMean:{:.3f}, BVMin:{:.3f} | Time:{:.3f}".format(
-                self.training_step, batch_step, policy_loss, value_loss, reward_loss, first_step_reward_loss_pi,
-                first_step_reward_loss_exp, consistency_loss, bc_loss, entropy_loss, grad_loss,
-                float(gail_r.max()), float(gail_r.mean()), float(gail_r.min()),
-                float(bootstrap_v.max()), float(bootstrap_v.mean()), float(bootstrap_v.min()),
-                time.time() - x
-            ))
+            print(
+                "Training Step:{}; Batch Step:{}; P:{:.3f}, V:{:.3f}, R:{:.3f}, FRP:{:.3f}, FRE:{:.3f}, C:{:.3f}, BC:{:.3f}, E:{:.3f}, G:{:.3f} "
+                "| GMax:{:.3f}, GMean:{:.3f}, GMin:{:.3f} | BVMax:{:.3f}, BVMean:{:.3f}, BVMin:{:.3f} | Time:{:.3f}".format(
+                    self.training_step, batch_step, policy_loss, value_loss, reward_loss, first_step_reward_loss_pi,
+                    first_step_reward_loss_exp, consistency_loss, bc_loss, entropy_loss, grad_loss,
+                    float(gail_r.max()), float(gail_r.mean()), float(gail_r.min()),
+                    float(bootstrap_v.max()), float(bootstrap_v.mean()), float(bootstrap_v.min()),
+                    time.time() - x
+                ))
 
             target_counter += 1
             selfplay_counter += 1
@@ -179,7 +181,6 @@ class Trainer:
                         "target_step": self.training_step
                     }
                 )
-
 
             if selfplay_counter > self.config.selfplay_update_interval:
                 self.selfplay_weight = copy.deepcopy(self.model.get_weights())
@@ -223,7 +224,7 @@ class Trainer:
                                                                    self.config.max_moves)) * self.config.num_workers
 
                 if (num_played_games < desired_played_games
-                    and self.training_step < self.config.training_steps
+                        and self.training_step < self.config.training_steps
                 ):
                     shared_storage.set_info.remote("running_games", True)
                     print("Launching rollout at training step", self.training_step)
@@ -234,13 +235,12 @@ class Trainer:
 
                     num_played_games += len(game_histories)
                     shared_storage.set_info.remote("running_games", False)
-                    print("End rollout. # of games played = ", num_played_games,  "Desired:", desired_played_games)
-
+                    print("End rollout. # of games played = ", num_played_games, "Desired:", desired_played_games)
 
             # Logs.
             if self.training_step % 10 == 0:
                 # Log the information.
-                writer.add_scalar("Training/Total_loss",total_loss, self.training_step)
+                writer.add_scalar("Training/Total_loss", total_loss, self.training_step)
                 writer.add_scalar("Training/Value_loss", value_loss, self.training_step)
                 writer.add_scalar("Training/Reward_loss", reward_loss, self.training_step)
                 writer.add_scalar("Training/Grad_loss", grad_loss, self.training_step)
@@ -291,7 +291,7 @@ class Trainer:
         Update learning rate
         """
         lr = self.config.lr_init * self.config.lr_decay_rate ** (
-            self.training_step / self.config.lr_decay_steps
+                self.training_step / self.config.lr_decay_steps
         )
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = lr
@@ -318,14 +318,13 @@ class Trainer:
         batchsize = observation_batch.shape[0]
 
         # Keep values as scalars for calculating the priorities for the prioritized replay
-        target_value_scalar = np.array(target_value[:batchsize//2], dtype="float32")
+        target_value_scalar = np.array(target_value[:batchsize // 2], dtype="float32")
         priorities = np.zeros_like(target_value_scalar)
 
         device = next(self.model.parameters()).device
 
         if self.config.PER:
             weight_batch = torch.from_numpy(weight_batch.copy()).float().to(device)
-
 
         observation_batch = torch.from_numpy(observation_batch).float().to(device)  # [B,O_SHAPE]
         next_observation_batch = torch.from_numpy(next_observation_batch).float().to(device)  # [B, UNROLL + 1, OSHAPE]
@@ -356,9 +355,11 @@ class Trainer:
 
         for i in range(1, action_batch.shape[1]):
             _, _, _, gail_calc_hidden = self.target_model.initial_inference(last_observation)
+            # gail_calc_hidden = self.target_model.encode(last_observation)
             _, gail_reward, _, _ = self.target_model.recurrent_inference(
                 gail_calc_hidden, action_batch[:, i]
             )
+            # gail_reward = self.target_model.reward(gail_calc_hidden, action_batch[:, i])
             gail_reward = -F.logsigmoid(-gail_reward).reshape(batchsize, 1).detach()
             gail_rewards.append(gail_reward)
             target_hiddens.append(gail_calc_hidden)
@@ -385,12 +386,12 @@ class Trainer:
         policy_info_mcts, policy_info_bc = torch.chunk(policy_info, 2, dim=-1)
 
         for j in range(self.config.td_steps):
-            target_value[:batchsize // 2, 0:1] += (self.config.discount ** j) * gail_rewards[:batchsize // 2, j:j+1]
+            target_value[:batchsize // 2, 0:1] += (self.config.discount ** j) * gail_rewards[:batchsize // 2, j:j + 1]
 
-        value_loss += self.loss_value_fn(value[:batchsize//2], target_value[:batchsize//2, 0:1])
-        policy_loss_0, entropy = self.loss_pi_kl_fn(policy_info_mcts[:batchsize//2],
-                                                    raw_action_batch[0][:batchsize//2],
-                                                    raw_policy_batch[0][:batchsize//2])
+        value_loss += self.loss_value_fn(value[:batchsize // 2], target_value[:batchsize // 2, 0:1])
+        policy_loss_0, entropy = self.loss_pi_kl_fn(policy_info_mcts[:batchsize // 2],
+                                                    raw_action_batch[0][:batchsize // 2],
+                                                    raw_policy_batch[0][:batchsize // 2])
 
         policy_loss += policy_loss_0
         policy_entropy_loss -= entropy
@@ -412,12 +413,12 @@ class Trainer:
             """
 
             # We add gradient penalty here.
-            gp_hidden_pi = hidden_state[:batchsize//2, :].detach()
-            gp_action_pi = action_batch[:batchsize//2, i]
-            gp_hidden_exp = hidden_state[batchsize//2, :].detach()
-            gp_action_exp = action_batch[batchsize//2, i]
+            gp_hidden_pi = hidden_state[:batchsize // 2, :].detach()
+            gp_action_pi = action_batch[:batchsize // 2, i]
+            gp_hidden_exp = hidden_state[batchsize // 2, :].detach()
+            gp_action_exp = action_batch[batchsize // 2, i]
 
-            alpha = torch.rand(batchsize//2, 1).cuda()
+            alpha = torch.rand(batchsize // 2, 1).cuda()
             interpolate_hidden = gp_hidden_pi * alpha + gp_hidden_exp * (1 - alpha)
             interpolate_action = gp_action_pi * alpha + gp_action_exp * (1 - alpha)
 
@@ -451,34 +452,34 @@ class Trainer:
             consistency_loss += (self.loss_consistency_atomic_fn(hidden_state, target_hidden)
                                  * mask_batch[:, i:(i + 1)]).squeeze()
 
-            reward_step_loss = self.loss_reward_fn(r_pi_logits=reward[:batchsize//2, :],
-                                                   r_exp_logits=reward[batchsize//2:, :])
+            reward_step_loss = self.loss_reward_fn(r_pi_logits=reward[:batchsize // 2, :],
+                                                   r_exp_logits=reward[batchsize // 2:, :])
 
             if i == 1:
-                first_step_reward_loss_pi = reward_step_loss[:batchsize//2].mean().item()
-                first_step_reward_loss_exp = reward_step_loss[batchsize//2:].mean().item()
+                first_step_reward_loss_pi = reward_step_loss[:batchsize // 2].mean().item()
+                first_step_reward_loss_exp = reward_step_loss[batchsize // 2:].mean().item()
 
             reward_loss += reward_step_loss
 
             hidden_state.register_hook(lambda grad: grad * 0.5)
 
             if i <= self.config.num_unroll_steps_reanalyze:
-                policy_loss_i, entropy = self.loss_pi_kl_fn(policy_info_mcts[:batchsize//2],
-                                                            raw_action_batch[i][:batchsize//2],
-                                                            raw_policy_batch[i][:batchsize//2])
+                policy_loss_i, entropy = self.loss_pi_kl_fn(policy_info_mcts[:batchsize // 2],
+                                                            raw_action_batch[i][:batchsize // 2],
+                                                            raw_policy_batch[i][:batchsize // 2])
 
                 policy_loss += policy_loss_i
                 policy_entropy_loss -= entropy
 
                 # Now we need to calculate the target value
                 for j in range(self.config.td_steps):
-                    target_value[:batchsize//2, i:i+1] += (self.config.discount ** j) * gail_rewards[:batchsize//2,
-                                                                                     i + j:i + j+1]
+                    target_value[:batchsize // 2, i:i + 1] += (self.config.discount ** j) \
+                                                              * gail_rewards[:batchsize // 2, i + j:i + j + 1]
 
-                value_loss += self.loss_value_fn(value[:batchsize//2], target_value[:batchsize//2, i:i + 1])
+                value_loss += self.loss_value_fn(value[:batchsize // 2], target_value[:batchsize // 2, i:i + 1])
 
                 pred_value_scalar = torch_utils.tensor_to_scalar(
-                    torch_utils.support_to_scalar(value[:batchsize//2], self.config.support_size).squeeze()
+                    torch_utils.support_to_scalar(value[:batchsize // 2], self.config.support_size).squeeze()
                 )
                 priorities[:, i] = np.abs(pred_value_scalar - target_value_scalar[:, i]) ** self.config.PER_alpha
 
@@ -491,12 +492,11 @@ class Trainer:
             target_loss *= weight_batch
 
         loss = target_loss.mean() + self.config.entropy_loss_coeff * policy_entropy_loss.mean() \
-                + self.config.consistency_loss_coeff * consistency_loss.mean() \
-                + self.config.grad_loss_coeff * gradient_penalty_loss.mean()
+               + self.config.consistency_loss_coeff * consistency_loss.mean() \
+               + self.config.grad_loss_coeff * gradient_penalty_loss.mean()
 
         if self.training_step % self.config.bc_frequency == 0:
             loss += self.config.bc_coeff * bc_loss.mean()
-
 
         loss.register_hook(lambda grad: grad * (1 / self.config.num_unroll_steps))
         parameters = self.model.parameters()
@@ -522,7 +522,7 @@ class Trainer:
             priorities,
             # For log purpose
             loss.item(),
-            torch_utils.tensor_to_numpy(gail_rewards[:batchsize//2, 0]).reshape(-1),
+            torch_utils.tensor_to_numpy(gail_rewards[:batchsize // 2, 0]).reshape(-1),
             bootstrap_v.reshape(-1),
             value_loss.mean().item(),
             reward_loss.mean().item(),

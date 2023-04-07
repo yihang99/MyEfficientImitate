@@ -1,0 +1,25 @@
+# @package _group_
+speed:
+  module: actor_state.speed
+
+control:
+  module: actor_state.control
+
+#velocity:
+#  module: actor_state.velocity
+
+gnss:
+  module: navigation.gnss
+
+central_rgb:
+  module: camera.rgb
+  fov: 90
+  width: 240
+  height: 192
+  location: [1.5, 0.0, 2.4]
+  rotation: [0.0, 0.0, 0.0]
+
+#route_plan:
+#  module: navigation.waypoint_plan
+#  steps: 5
+

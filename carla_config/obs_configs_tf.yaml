@@ -1,0 +1,48 @@
+# @package _group_
+speed:
+  module: actor_state.speed
+
+control:
+  module: actor_state.control
+
+gnss:
+  module: navigation.gnss
+
+route_plan:
+  module: navigation.waypoint_plan
+  steps: 20
+
+central_rgb:
+  module: camera.rgb
+  fov: 120
+  width: 960
+  height: 480
+  location: [1.3, 0.0, 2.3]
+  rotation: [0.0, 0.0, 0.0]
+  lens_circle_multiplier: 0.0
+
+left_rgb:
+  module: camera.rgb
+  fov: 120
+  width: 960
+  height: 480
+  location: [1.3, 0.0, 2.3]
+  rotation: [0.0, 0.0, -60.0]
+  lens_circle_multiplier: 0.0
+
+right_rgb:
+  module: camera.rgb
+  fov: 120
+  width: 960
+  height: 480
+  location: [1.3, 0.0, 2.3]
+  rotation: [0.0, 0.0, 60.0]
+
+#narr_rgb:
+#  module: camera.rgb
+#  fov: 50
+#  width: 384
+#  height: 240
+#  location: [1.5, 0.0, 2.4]
+#  rotation: [0.0, 0.0, 0.0]
+
