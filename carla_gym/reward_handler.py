@@ -166,4 +166,5 @@ class RewardHandler(object):
             'simulation_time': simulation_time
 
         }
+        # ipdb.set_trace()
         return reward, reward_debug

@@ -60,7 +60,7 @@ class Carla_Env(gym.Env):
         # define action spaces exposed to agent: throttle, steer, brake
         self.action_space = gym.spaces.Discrete(28)
 
-        self._task_idx = 2
+        self._task_idx = 0
         self._shuffle_task = not True
         self._task = self._all_tasks[self._task_idx].copy()
 
@@ -113,7 +113,9 @@ class Carla_Env(gym.Env):
         self.last_st = info['run_stop_sign']
         self.last_tl = info['encounter_light']
         '''
-        return obs_dict, {}
+        info = {'global_plan': self._ev_handler.ego_vehicle._global_plan_gps,
+                'global_plan_world_coord': self._ev_handler.ego_vehicle._global_plan_world_coord}
+        return obs_dict, info
 
     def step(self, control_dict):
         #manual_stop_time = 189.5
@@ -159,6 +161,7 @@ class Carla_Env(gym.Env):
         '''
         # update weather
         # self._wt_handler.tick(snap_shot.timestamp.delta_seconds)
+        self._wt_handler.tick(3)
 
         # update the route_plan and speed
         '''
@@ -218,7 +221,7 @@ class Carla_Env(gym.Env):
     def set_sync_mode(self, sync):
         settings = self._world.get_settings()
         settings.synchronous_mode = sync
-        settings.fixed_delta_seconds = 0.1
+        settings.fixed_delta_seconds = 0.05 #0.1
         settings.deterministic_ragdolls = True
         self._world.apply_settings(settings)
         self._tm.set_synchronous_mode(sync)

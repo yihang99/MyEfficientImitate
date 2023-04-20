@@ -1,5 +1,6 @@
 import time
 
+import cv2
 import gym
 import ipdb
 import os
@@ -20,24 +21,30 @@ env = gym.make('LeaderBoard-v0',
                weather_group='train',
                routes_group='train')
 env = wrapper.CarlaWrapper(env, test=True, pure_rgb=True)
-ipdb.set_trace()
 
-model = SAC("MlpPolicy", env, verbose=1)
-ipdb.set_trace()
-print(time.ctime())
+model = SAC("CnnPolicy", env, verbose=1)
+
+start_time = time.time()
 model.learn(total_timesteps=10000, log_interval=4)
-print(time.ctime())# model.save("sac_pendulum")
-#
-# del model # remove to demonstrate saving and loading
-#
-# model = SAC.load("sac_pendulum")
+print('training time:', time.time() - start_time)
+model.save("carla_toy_ckpt")
 
+# del model # remove to demonstrate saving and loading
+model = SAC.load("carla_toy_ckpt")
 
 obs = env.reset()
-# while True:
-#     action, _states = model.predict(obs, deterministic=True)
-#     obs, reward, done, info = env.step(action)
-#     print(reward)
-#     # env.render()
-#     if done:
-#       obs = env.reset()
+done = False
+ipdb.set_trace()
+step = 0
+while not done:
+    step += 1
+    ac, _states = model.predict(obs, deterministic=True)
+    ac = float(ac[0]), float(ac[1])
+    obs, rwd, done, info = env.step(ac)
+    im = obs  # obs['ori_data']
+    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    cv2.imshow('show', im)
+    cv2.waitKey(20)
+    print(step, '{:.6f}'.format(rwd), ac)
+
+env.close()

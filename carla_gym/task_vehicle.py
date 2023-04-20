@@ -13,7 +13,7 @@ class TaskVehicle(object):
     def __init__(self, vehicle, target_transforms, spawn_transforms, tl_handler, test=False):
         """
         vehicle: carla.Vehicle
-        target_transforms: list of carla.Transform
+        target_transforms: list of carla.Transform (from the .xml file)
         """
         self.vehicle = vehicle
         self._world = self.vehicle.get_world()
@@ -36,7 +36,7 @@ class TaskVehicle(object):
         self._route_completed = 0.0
         self._route_length = 0.0
 
-        self._target_transforms = target_transforms  # transforms
+        self._target_transforms = target_transforms  # transforms, whose locations are waypoints defined in .xml
 
         self._planner = GlobalRoutePlanner(self._map, resolution=1.0)
 
@@ -203,4 +203,5 @@ class TaskVehicle(object):
             f_vec = loc1 - loc0
             yaw = np.rad2deg(np.arctan2(f_vec.y, f_vec.x))
         rot = carla.Rotation(yaw=yaw)
+        # ipdb.set_trace()
         return carla.Transform(location=loc0, rotation=rot)

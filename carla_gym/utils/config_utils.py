@@ -5,6 +5,7 @@ import socket
 import xml.etree.ElementTree as ET
 import h5py
 import carla
+import ipdb
 import numpy as np
 import hydra
 
@@ -70,34 +71,61 @@ def init_agents(agent_configs_dict, **kwargs):
     return agents_dict
 
 
-def parse_routes_file(routes_xml_filename):
+def parse_routes_file(routes_xml_filename, format='roach'):
+    """
+    :param routes_xml_filename: .xml file to be parsed
+    :param format: format of the route description. Choices:
+    'roach' (by default)
+    'standard' (for original leaderboard and longest6)
+    :return: parsed route descriptions
+
+    When using standard, we ignore the town specification in the .xml file.
+    Please make sure the town is in accord with the route when starting the env.
+    """
     route_descriptions_dict = {}
     tree = ET.parse(routes_xml_filename)
 
-    for route in tree.iter("route"):
+    if format == 'roach':
+        for route in tree.iter("route"):
+            route_id = int(route.attrib['id'])
+            route_descriptions_dict[route_id] = {}
+            for actor_type in ['ego_vehicle', 'scenario_actor']:
+                route_descriptions_dict[route_id][actor_type+'s'] = {}
+                for actor in route.iter(actor_type):
+                    actor_id = actor.attrib['id']
+                    waypoint_list = []  # the list of waypoints that can be found on this route for this actor
+                    for waypoint in actor.iter('waypoint'):
+                        location = carla.Location(
+                            x=float(waypoint.attrib['x']),
+                            y=float(waypoint.attrib['y']),
+                            z=float(waypoint.attrib['z']))
+                        rotation = carla.Rotation(
+                            roll=float(waypoint.attrib['roll']),
+                            pitch=float(waypoint.attrib['pitch']),
+                            yaw=float(waypoint.attrib['yaw']))
+                        waypoint_list.append(carla.Transform(location, rotation))
+                    route_descriptions_dict[route_id][actor_type+'s'][actor_id] = waypoint_list
 
-        route_id = int(route.attrib['id'])
-
-        route_descriptions_dict[route_id] = {}
-
-        for actor_type in ['ego_vehicle', 'scenario_actor']:
-            route_descriptions_dict[route_id][actor_type+'s'] = {}
-            for actor in route.iter(actor_type):
-                actor_id = actor.attrib['id']
-
-                waypoint_list = []  # the list of waypoints that can be found on this route for this actor
-                for waypoint in actor.iter('waypoint'):
-                    location = carla.Location(
-                        x=float(waypoint.attrib['x']),
-                        y=float(waypoint.attrib['y']),
-                        z=float(waypoint.attrib['z']))
-                    rotation = carla.Rotation(
-                        roll=float(waypoint.attrib['roll']),
-                        pitch=float(waypoint.attrib['pitch']),
-                        yaw=float(waypoint.attrib['yaw']))
-                    waypoint_list.append(carla.Transform(location, rotation))
-
-                route_descriptions_dict[route_id][actor_type+'s'][actor_id] = waypoint_list
+    elif format == 'standard':
+        for route in tree.iter("route"):
+            route_id = int(route.attrib['id'])
+            route_descriptions_dict[route_id] = {}
+            actor_type = 'ego_vehicle'
+            route_descriptions_dict[route_id][actor_type + 's'] = {}
+            actor_id = 'hero'
+            waypoint_list = []  # the list of waypoints that can be found on this route for this actor
+            for waypoint in route.iter('waypoint'):
+                location = carla.Location(
+                    x=float(waypoint.attrib['x']),
+                    y=float(waypoint.attrib['y']),
+                    z=float(waypoint.attrib['z']))
+                rotation = carla.Rotation(
+                    roll=float(waypoint.attrib['roll']),
+                    pitch=float(waypoint.attrib['pitch']),
+                    yaw=float(waypoint.attrib['yaw']))
+                waypoint_list.append(carla.Transform(location, rotation))
+            route_descriptions_dict[route_id][actor_type + 's'][actor_id] = waypoint_list
+            route_descriptions_dict[route_id]['scenario_actors'] = {}
 
     return route_descriptions_dict
 
@@ -146,3 +174,17 @@ def get_free_tcp_port():
     # 2000 works fine for now
     server_port = 2000
     return server_port
+
+
+def main():
+    """
+    For testing functions
+    :return:
+    """
+    pass
+    result1 = parse_routes_file('/home/yihang/MyEI/carla_gym/scenario_descriptions/LeaderBoard/Town01/routes.xml')
+    result2 = parse_routes_file('/home/yihang/transfuser/leaderboard/data/longest6/longest6_et.xml', format='standard')
+
+
+if __name__ == '__main__':
+    main()

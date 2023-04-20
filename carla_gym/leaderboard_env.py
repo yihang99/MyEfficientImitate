@@ -9,21 +9,25 @@ import yaml
 
 
 class LeaderboardEnv(Carla_Env):
-    def __init__(self, carla_map, host, port, seed, no_rendering, weather_group, routes_group=None, env_test=False,
+    def __init__(self, carla_map, host, port, seed, no_rendering, weather_group, routes_group=None,
+                 routes_file_path=None, routes_file_format='roach', env_test=False,
                  three_cam=False):
-        all_tasks = self.build_all_tasks(carla_map, weather_group, routes_group)
+        all_tasks = self.build_all_tasks(carla_map, weather_group,
+                                         routes_group=routes_group,
+                                         routes_file_path=routes_file_path,
+                                         routes_file_format=routes_file_format)
         print('len(all_tasks) =', len(all_tasks))
         self.three_cam = three_cam
-        if self.three_cam:
-            # obs_config_file = open('config/carla/obs_configs_three_cam.yaml')
-            obs_config_file = open('../carla_config/carla/obs_configs_tf.yaml')
-        else:
-            obs_config_file = open('config/carla/obs_configs.yaml')
+        # if self.three_cam:
+        #     obs_config_file = open('../carla_config/obs_configs_tf.yaml')
+        # else:
+        #     obs_config_file = open('config/carla/obs_configs.yaml')
+        obs_config_file = open('../carla_config/obs_configs_tf.yaml')
         obs_configs = yaml.load(obs_config_file, Loader=yaml.FullLoader)
         super().__init__(carla_map, host, port, obs_configs, all_tasks, seed, no_rendering, env_test)
 
     @staticmethod
-    def build_all_tasks(carla_map, weather_group, routes_group=None):
+    def build_all_tasks(carla_map, weather_group, routes_group=None, routes_file_path=None, routes_file_format='roach'):
         assert carla_map in ['Town01', 'Town02', 'Town03', 'Town04', 'Town05', 'Town06']
         num_zombie_vehicles = {
             'Town01': 120,
@@ -59,22 +63,28 @@ class LeaderboardEnv(Carla_Env):
             weathers = [weather_group]
 
         # task_type setup
-        if carla_map == 'Town04' and routes_group is not None:
-            description_folder = CARLA_GYM_ROOT_DIR / 'scenario_descriptions/LeaderBoard' \
-                                 / f'Town04_{routes_group}'
+        if routes_file_path:
+            actor_configs_dict = {'ego_vehicles': {'hero': {'model': 'vehicle.lincoln.mkz2017'}}}
+            route_descriptions_dict = parse_routes_file(routes_file_path, routes_file_format)
         else:
-            description_folder = CARLA_GYM_ROOT_DIR / 'scenario_descriptions/LeaderBoard' / carla_map
+            if carla_map == 'Town04' and routes_group is not None:
+                description_folder = CARLA_GYM_ROOT_DIR / 'scenario_descriptions/LeaderBoard' \
+                                     / f'Town04_{routes_group}'
+            else:
+                description_folder = CARLA_GYM_ROOT_DIR / 'scenario_descriptions/LeaderBoard' / carla_map
 
-        actor_configs_dict = json.load(open(description_folder / 'actors.json'))
-        route_descriptions_dict = parse_routes_file(description_folder / 'routes.xml')
-        route_descriptions_dict = parse_routes_file(description_folder / 'routes_diy.xml')
+            actor_configs_dict = json.load(open(description_folder / 'actors.json'))
+            route_descriptions_dict = parse_routes_file(description_folder / 'routes.xml')
+
+        # route_descriptions_dict = parse_routes_file('/home/yihang/transfuser/leaderboard/data/longest6/longest6_sep/longest6_Town01.xml', format='standard')
+        # route_descriptions_dict = parse_routes_file(description_folder / 'routes_diy.xml')
 
         all_tasks = []
         for weather in weathers:
             for route_id, route_description in route_descriptions_dict.items():
                 task = {
                     'weather': weather,
-                    'description_folder': description_folder,
+                    # 'description_folder': description_folder,
                     'route_id': route_id,
                     'num_zombie_vehicles': num_zombie_vehicles[carla_map],
                     'num_zombie_walkers': num_zombie_walkers[carla_map],
