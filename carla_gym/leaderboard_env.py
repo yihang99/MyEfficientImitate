@@ -30,7 +30,7 @@ class LeaderboardEnv(Carla_Env):
     def build_all_tasks(carla_map, weather_group, routes_group=None, routes_file_path=None, routes_file_format='roach'):
         assert carla_map in ['Town01', 'Town02', 'Town03', 'Town04', 'Town05', 'Town06']
         num_zombie_vehicles = {
-            'Town01': 120,
+            'Town01': 0,#120,
             'Town02': 70,
             'Town03': 70,
             'Town04': 150,
@@ -38,7 +38,7 @@ class LeaderboardEnv(Carla_Env):
             'Town06': 120
         }
         num_zombie_walkers = {
-            'Town01': 120,
+            'Town01': 0,#120,
             'Town02': 70,
             'Town03': 70,
             'Town04': 80,
